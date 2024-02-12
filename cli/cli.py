@@ -2,6 +2,7 @@ import sys
 import click
 from cli.prepare import prepare
 from cli.apamix import apamix
+from cli.readpa import readpa
 
 @click.group()
 def cli():
@@ -14,4 +15,5 @@ def cli():
 
 cli.add_command(prepare)
 cli.add_command(apamix)
+cli.add_command(readpa)
 

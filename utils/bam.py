@@ -1,6 +1,61 @@
 from collections import Counter
 
 
+def cigar_support_adj(line, strand):
+    """
+    Processing the cigar information.
+    [(cigar, length)], soft clip (4)
+    """
+    threshold_pct_seq = 0.7
+    threshold_min_pa = 5
+    cigarinfo = line.cigar
+    if cigarinfo[-1][0] == 4 and strand == '+':
+        cigar_c = int(cigarinfo[-1][1])
+        """
+        For R2, if the length of soft clip was more than 30,
+        we check the polyA[T] from 5' ot 3'
+        """
+
+        # if cigar_c >= threshold_min_pa:
+        #     sequence_ = line.query_sequence[-cigar_c:-cigar_c + threshold_min_pa - 1]
+        # else:
+        sequence_ = line.query_sequence[-cigar_c:]
+
+        if cigar_c < threshold_min_pa:
+            pa_support = 'no'
+        else:
+            freq = Counter(sequence_)
+            if freq['A'] > len(sequence_) * threshold_pct_seq:
+                pa_support = 'yes'
+            else:
+                pa_support = 'no'
+
+    elif cigarinfo[0][0] == 4 and strand == '-':
+        cigar_c = int(cigarinfo[0][1])
+        # if cigar_c >= threshold_min_pa:
+        #     sequence_ = line.query_sequence[cigar_c-threshold_min_pa:cigar_c]
+        # else:
+        sequence_ = line.query_sequence[:cigar_c]
+
+        if cigar_c < threshold_min_pa:
+            pa_support = 'no'
+        else:
+            freq = Counter(sequence_)
+            if freq['T'] > len(sequence_) * threshold_pct_seq:
+                pa_support = 'yes'
+            else:
+                pa_support = 'no'
+
+    else:
+        pa_support = 'no'
+
+    if pa_support == 'yes':
+        pa_len = cigar_c
+    else:
+        pa_len = 0
+
+    return pa_support, pa_len
+
 def cigar_support(line, strand):
     """
     Processing the cigar information.

@@ -19,7 +19,7 @@ def run(arg):
 
     pickle_tmp = f'{outdir}/tmp/{chrom}_{left_site}_{right_site}_{strand}.pickle'
 
-    cb_tag, umi_tag = list(map(lambda x: x.strip(), tag.split(',')))
+    cb_tag, umi_tag, gid_tag, ensid_tag, pa_tag = list(map(lambda x: x.strip(), tag.split(',')))
 
     t0 = time.time()
     if os.path.exists(pickle_tmp) and os.stat(pickle_tmp).st_size != 0:
@@ -105,17 +105,17 @@ def run(arg):
             #     dt = 0
 
             try:
-                pai = read2.get_tag('pa')
+                pai = read2.get_tag(pa_tag)
             except KeyError:
                 pai = 0
 
             try:
-                gid = read2.get_tag('GN')
+                gid = read2.get_tag(gid_tag)
             except KeyError:
                 gid = None
             
             try:
-                ensid = read2.get_tag('GX')
+                ensid = read2.get_tag(ensid_tag)
             except KeyError:
                 ensid = None
 
@@ -179,12 +179,12 @@ def run(arg):
                 pai = 0
 
             try:
-                gid = read2.get_tag('GN')
+                gid = read2.get_tag(gid_tag)
             except KeyError:
                 gid = None
             
             try:
-                ensid = read2.get_tag('GX')
+                ensid = read2.get_tag(ensid_tag)
             except KeyError:
                 ensid = None
 

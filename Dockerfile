@@ -8,10 +8,17 @@ RUN tar -zxvf bedtools-2.26.0.tar.gz
 RUN cd bedtools2 && make && make install
 
 # copy files to the docker image
-COPY . /SCAPE
+COPY requirements.txt .
 
 # install python dependencies
-RUN cd SCAPE && pip install -r requirements.txt
+RUN pip install -r requirements.txt
 
 
+# clean
+RUN rm -rf bedtools-2.26.0.tar.gz bedtools2 requirements.txt
 
+# clean cache
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN pip cache purge
+
+CMD ["/bin/bash"]

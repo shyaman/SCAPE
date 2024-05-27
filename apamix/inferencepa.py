@@ -19,7 +19,7 @@ def run(arg):
 
     pickle_tmp = f'{outdir}/tmp/{chrom}_{left_site}_{right_site}_{strand}.pickle'
 
-    cb_tag, umi_tag, gid_tag, ensid_tag, pa_tag = list(map(lambda x: x.strip(), tag.split(',')))
+    cb_tag, umi_tag, gid_tag, ensid_tag= list(map(lambda x: x.strip(), tag.split(',')))
 
     t0 = time.time()
     if os.path.exists(pickle_tmp) and os.stat(pickle_tmp).st_size != 0:
@@ -44,7 +44,7 @@ def run(arg):
             'cb': [],
             'umi': [],
             'pa_len_arr': [],
-            'pai_len_arr': [],
+            # 'pai_len_arr': [],
             'strand': [],
             'gene_id': [],
             'ensid': [],
@@ -104,10 +104,10 @@ def run(arg):
             # except KeyError:
             #     dt = 0
 
-            try:
-                pai = read2.get_tag(pa_tag)
-            except KeyError:
-                pai = 0
+            # try:
+            #     pai = read2.get_tag(pa_tag)
+            # except KeyError:
+            #     pai = 0
 
             try:
                 gid = read2.get_tag(gid_tag)
@@ -173,10 +173,10 @@ def run(arg):
             # except KeyError:
             #     dt = 0
             
-            try:
-                pai = read2.get_tag('pa')
-            except KeyError:
-                pai = 0
+            # try:
+            #     pai = read2.get_tag('pa')
+            # except KeyError:
+            #     pai = 0
 
             try:
                 gid = read2.get_tag(gid_tag)
@@ -196,6 +196,9 @@ def run(arg):
             #     r2_st = right_site - r2_relative_start +  1
         try:
             # for 10X
+            # append info if only read assigned to a gene
+            if gid is None:
+                continue
             cb = read2.get_tag(cb_tag)
             umi = read2.get_tag(umi_tag)
             # apa_reads.r2_utr_st_arr.append(r2_st)
@@ -206,7 +209,7 @@ def run(arg):
             apa_reads.cb.append(cb)
             apa_reads.umi.append(umi)
             apa_reads.pa_len_arr.append(pa_len)
-            apa_reads.pai_len_arr.append(pai)
+            # apa_reads.pai_len_arr.append(pai)
             apa_reads.strand.append(strand)
             apa_reads.gene_id.append(gid)
             apa_reads.ensid.append(ensid)
@@ -242,70 +245,74 @@ def run(arg):
     # apa_reads.r2_utr_st_arr = apa_reads.r2_utr_st_arr + relative_offset
     # apa_reads.pa_site_arr = apa_reads.pa_site_arr + relative_offset
 
+    if cb_df is not None:
+        cb_df = pd.read_csv(cb_df, names=['cb'])
+        apa_reads = pd.merge(apa_reads, cb_df, on='cb', how='inner')
+
     return apa_reads
 
-    # here only add 100 bp for extending the utr length, just for decreasing time consumption.
-    utr_l = max([max(apa_reads.r2_utr_st_arr) + max(apa_reads.r2_len_arr) + 50, 1000])
+    # # here only add 100 bp for extending the utr length, just for decreasing time consumption.
+    # utr_l = max([max(apa_reads.r2_utr_st_arr) + max(apa_reads.r2_len_arr) + 50, 1000])
 
-    test = APA(
-        n_max_apa=int(n_max_apa),
-        n_min_apa=int(n_min_apa),
-        r1_utr_st_arr=apa_reads.r2_utr_st_arr,
-        r1_len_arr=apa_reads.r2_len_arr,
-        r2_len_arr=apa_reads.r1_len_arr,
-        polya_len_arr=apa_reads.polya_len_arr,
-        pa_site_arr=apa_reads.pa_site_arr,
-        LA_dis_arr=LA_dis_arr,
-        pmf_LA_dis_arr=pmf_LA_dis_arr,
-        utr_len=utr_l,
-        cb=apa_reads.cb,
-        umi=apa_reads.umi,
-        mu_f=mu_f,
-        sigma_f=sigma_f,
-        region_name=region_name,
-        verbose=verbose
-    )
+    # test = APA(
+    #     n_max_apa=int(n_max_apa),
+    #     n_min_apa=int(n_min_apa),
+    #     r1_utr_st_arr=apa_reads.r2_utr_st_arr,
+    #     r1_len_arr=apa_reads.r2_len_arr,
+    #     r2_len_arr=apa_reads.r1_len_arr,
+    #     polya_len_arr=apa_reads.polya_len_arr,
+    #     pa_site_arr=apa_reads.pa_site_arr,
+    #     LA_dis_arr=LA_dis_arr,
+    #     pmf_LA_dis_arr=pmf_LA_dis_arr,
+    #     utr_len=utr_l,
+    #     cb=apa_reads.cb,
+    #     umi=apa_reads.umi,
+    #     mu_f=mu_f,
+    #     sigma_f=sigma_f,
+    #     region_name=region_name,
+    #     verbose=verbose
+    # )
 
-    cb = apa_reads.cb
-    umi = apa_reads.umi
-    del apa_reads
+    # cb = apa_reads.cb
+    # umi = apa_reads.umi
+    # del apa_reads
 
-    logger.debug(f'Processing {chrom}, {left_site}, {right_site}, {strand}')
+    # logger.debug(f'Processing {chrom}, {left_site}, {right_site}, {strand}')
 
-    res = test.inference()
-    del test
+    # res = test.inference()
+    # del test
 
-    df = pd.concat([pd.Series(res.label, name='label'), cb, umi], axis=1)
-    df.columns = ['label', 'cb', 'umi']
+    # df = pd.concat([pd.Series(res.label, name='label'), cb, umi], axis=1)
+    # df.columns = ['label', 'cb', 'umi']
 
-    # remove last noise component
-    ignore_label = len(res.alpha_arr)
+    # # remove last noise component
+    # ignore_label = len(res.alpha_arr)
 
-    # Correct pA sites from relative position to genome position
-    if strand == '+':
-        alpha_arr = left_site + res.alpha_arr - relative_offset - 1
-    else:
-        alpha_arr = right_site - res.alpha_arr + relative_offset + 1
-    alpha_arr = [f'{chrom}:{int(alpha)}:{int(beta)}:{strand}' for alpha, beta in zip(alpha_arr, res.beta_arr.values.tolist())]
+    # # Correct pA sites from relative position to genome position
+    # if strand == '+':
+    #     alpha_arr = left_site + res.alpha_arr - relative_offset - 1
+    # else:
+    #     alpha_arr = right_site - res.alpha_arr + relative_offset + 1
+    # alpha_arr = [f'{chrom}:{int(alpha)}:{int(beta)}:{strand}' for alpha, beta in zip(alpha_arr, res.beta_arr.values.tolist())]
 
-    # final_res = defaultdict(int_dic)
-    df = df[df.label != ignore_label]
-    df = df.groupby(['cb', 'umi'])['label'].max().reset_index()
+    # # final_res = defaultdict(int_dic)
+    # df = df[df.label != ignore_label]
+    # df = df.groupby(['cb', 'umi'])['label'].max().reset_index()
 
-    df = df.groupby(['cb', 'label'])['umi'].size().reset_index()# calculate umi counts
-    df = df.pivot_table(index=['cb'], columns='label', values='umi').reset_index()# make pivot table
-    rename_dict = dict(zip(range(len(alpha_arr)), alpha_arr))
-    df.rename(columns=rename_dict, inplace=True)
-    res = pd.merge(cb_df, df, on=['cb'], how='left')
+    # df = df.groupby(['cb', 'label'])['umi'].size().reset_index()# calculate umi counts
+    # df = df.pivot_table(index=['cb'], columns='label', values='umi').reset_index()# make pivot table
+    # rename_dict = dict(zip(range(len(alpha_arr)), alpha_arr))
+    # df.rename(columns=rename_dict, inplace=True)
+    # res = pd.merge(cb_df, df, on=['cb'], how='left')
 
-    pickle_out = open(pickle_tmp, 'wb')
-    pickle.dump(res, pickle_out)
-    pickle_out.close()
+    # pickle_out = open(pickle_tmp, 'wb')
+    # pickle.dump(res, pickle_out)
+    # pickle_out.close()
 
-    res = res.drop('cb', axis=1).fillna(0).astype('int64')
+    # res = res.drop('cb', axis=1).fillna(0).astype('int64')
 
-    logger.debug(f'Done! {chrom}, {left_site}, {right_site}, {strand}')
-    return res
+    # logger.debug(f'Done! {chrom}, {left_site}, {right_site}, {strand}')
+    # return res
 
 
 

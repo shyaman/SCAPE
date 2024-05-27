@@ -17,6 +17,7 @@ from multiprocessing import set_start_method
 
 from utils.utils import dict_list
 from apamix.inference import wraper_process
+from apamix.sparse_matrix import convert_sparse_matrix
 
 
 logger.add('apamix.log',
@@ -116,6 +117,13 @@ logger.add('apamix.log',
     )
 
 @click.option(
+    '--pseudocount',
+    type=int,
+    default=10,
+    help='The pseudocount for the sparse matrix. Default: 10'
+    )
+
+@click.option(
     '--verbose',
     '-v',
     is_flag=True,
@@ -135,6 +143,7 @@ def apamix(
     pmf_la_dis_arr,
     mu_f,
     sigma_f,
+    pseudocount,
     verbose
     ):
     if not all([bed, bam, out, cb]):
@@ -211,4 +220,7 @@ def apamix(
             df.columns = cb_df.cb.values.tolist()
         df.to_csv(f'{out}/pasite.csv.gz', mode=md, header=hd, compression='gzip')
         md, hd='a', False
+
+        sparse_matrix_adata = convert_sparse_matrix(df, pseudocount)
+        sparse_matrix_adata.write(os.path.join(out, 'adata_pa_sparse.h5ad'))
     logger.info('All done')

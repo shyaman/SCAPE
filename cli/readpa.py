@@ -17,6 +17,7 @@ from multiprocessing import set_start_method
 
 from utils.utils import dict_list
 from apamix.inferencepa import wraper_process
+from apamix.sparse_matrix import convert_sparse_matrix
 
 
 logger.add('apamix.log',
@@ -55,13 +56,13 @@ logger.add('apamix.log',
     '--cb',
     type=str,
     help='The cell barcode file, one cb for one line.',
-    required=True
+    default=None,
     )
 @click.option(
     '--tag',
     type=str,
-    default='CB,UB',
-    help='The cell barcode and UMI tag, for 10X: CB,UB.',
+    default='CB,UB,GN,GX',
+    help='The cell barcode and UMI tag, for 10X: CB,UB,GN,GX.',
     required=True
     )
 
@@ -121,6 +122,14 @@ logger.add('apamix.log',
     is_flag=True,
     help='Verbose mode'
 )
+
+@click.option(
+    '--pseudocount',
+    type=int,
+    default=10,
+    help='The pseudocount for the sparse matrix. Default: 10'
+    )
+
 def readpa(
     bed,
     bam,
@@ -135,9 +144,10 @@ def readpa(
     pmf_la_dis_arr,
     mu_f,
     sigma_f,
+    pseudocount,
     verbose
     ):
-    if not all([bed, bam, out, cb]):
+    if not all([bed, bam, out]):
         cli(['readpa', '--help'])
         sys.exit(1)
 
@@ -149,7 +159,7 @@ def readpa(
 
     target_region = open(bed, 'r')
     res_lst = []
-    cb_df = pd.read_csv(cb, names=['cb'])
+    cb_df = pd.read_csv(cb, names=['cb']) if cb else None
     # cb_df.cb = list(map(lambda x : x.split('-')[0], cb_df.cb.values))
 
     if la_dis_arr and pmf_la_dis_arr:
@@ -212,4 +222,10 @@ def readpa(
         # df.to_csv(f'{out}/pasite.csv.gz', mode=md, header=hd, compression='gzip')
         df.to_csv(f'{out}/pa_lengths.csv', mode=md, header=hd, index=False)
         md, hd='a', False
+
+    logger.info('Converting to sparse matrix')
+    df = pd.read_csv(f'{out}/pa_lengths.csv')
+    sparse_matrix_adata = convert_sparse_matrix([df, pseudocount])
+    sparse_matrix_adata.write(os.path.join(out, 'adata_pa_sparse.h5ad'))
+
     logger.info('All done')

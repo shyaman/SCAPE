@@ -97,7 +97,8 @@ def prepare(
                 info['chrom'],
                 str(st),
                 str(en),
-                ';'.join([info[gene_type_id], gid, tid, info['gene_name']]),
+                # ';'.join([info[gene_type_id], gid, tid, info['gene_name']]),
+                info['gene_name'],
                 '.',
                 info['strand']
             ]
@@ -136,7 +137,7 @@ def prepare(
     sort and merge utr region information
     """
     bedtmp = pybedtools.BedTool(utr_outfile)
-    bedtmp = bedtmp.sort().merge(d=500, s = True)
+    bedtmp = bedtmp.sort().merge(d=500, s = True, c = 4, o = 'distinct', delim = ';')
     
     utr_out = open(utr_outfile, 'w')
     utr_out.write(str(bedtmp))

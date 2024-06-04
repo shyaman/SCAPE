@@ -3,3 +3,6 @@
 .RData
 .Ruserdata
 __pycache__
+*.err
+*.out
+*.log

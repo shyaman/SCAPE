@@ -142,7 +142,7 @@ def prepare(
     utr_out = open(utr_outfile, 'w')
     utr_out.write(str(bedtmp))
     if mt_lst:
-        mt_tmp = pybedtools.BedTool('\n'.join(mt_lst), from_string=True).sort().merge(s=True)
+        mt_tmp = pybedtools.BedTool('\n'.join(mt_lst), from_string=True).sort().merge(s=True, c=4, o='distinct', delim=';')
         utr_out.write(str(mt_tmp))
     utr_out.close()
 

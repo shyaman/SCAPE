@@ -17,7 +17,6 @@ from multiprocessing import set_start_method
 
 from utils.utils import dict_list
 from apamix.inference import wraper_process
-from apamix.sparse_matrix import convert_sparse_matrix
 
 
 logger.add('apamix.log',

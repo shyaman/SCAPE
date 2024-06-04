@@ -16,8 +16,8 @@ from multiprocessing.pool import MaybeEncodingError
 from multiprocessing import set_start_method
 
 from utils.utils import dict_list
-from apamix.inferencepa import wraper_process
-from apamix.sparse_matrix import convert_sparse_matrix
+from apamix.inferencepa_10x import wraper_process_10x, convert2sparse_10x
+from apamix.inferencepa_bulk import wraper_process_bulk, convert2table
 
 
 logger.add('apamix.log',
@@ -130,6 +130,20 @@ logger.add('apamix.log',
     help='The pseudocount for the sparse matrix. Default: 10'
     )
 
+@click.option(
+    '--mode',
+    type=str,
+    default='10x',
+    help='The input data type. Default: 10x'
+    )
+
+@click.option(
+    '--create-table',
+    is_flag=True,
+    default=False,
+    help='Only create the table'
+    )
+
 def readpa(
     bed,
     bam,
@@ -145,87 +159,98 @@ def readpa(
     mu_f,
     sigma_f,
     pseudocount,
-    verbose
+    verbose,
+    mode,
+    create_table,
     ):
     if not all([bed, bam, out]):
         cli(['readpa', '--help'])
         sys.exit(1)
 
-    if not os.path.exists(os.path.join(out, 'tmp')):
-        os.makedirs(os.path.join(out, 'tmp'))
-        os.makedirs(os.path.join(out, 'huge'))
-        os.makedirs(os.path.join(out, 'TooLongRegion'))
-        os.makedirs(os.path.join(out, 'TimeConsulting'))
+    if not create_table:
+        if not os.path.exists(os.path.join(out, 'tmp')):
+            os.makedirs(os.path.join(out, 'tmp'))
+            os.makedirs(os.path.join(out, 'huge'))
+            os.makedirs(os.path.join(out, 'TooLongRegion'))
+            os.makedirs(os.path.join(out, 'TimeConsulting'))
 
-    target_region = open(bed, 'r')
-    res_lst = []
-    cb_df = pd.read_csv(cb, names=['cb']) if cb else None
-    # cb_df.cb = list(map(lambda x : x.split('-')[0], cb_df.cb.values))
+        target_region = open(bed, 'r')
+        res_lst = []
+        # cb_df.cb = list(map(lambda x : x.split('-')[0], cb_df.cb.values))
 
-    if la_dis_arr and pmf_la_dis_arr:
-        la_dis_arr = eval(la_dis_arr)
-        pmf_la_dis_arr = eval(pmf_la_dis_arr)
-        if not (isinstance(la_dis_arr, list) and isinstance(pmf_la_dis_arr, list)):
-            sys.exit('la_dis_arr and pmf_la_dis_arr were not list format in python.')
-    else:
-        la_dis_arr = None
-        pmf_la_dis_arr = None
+        if la_dis_arr and pmf_la_dis_arr:
+            la_dis_arr = eval(la_dis_arr)
+            pmf_la_dis_arr = eval(pmf_la_dis_arr)
+            if not (isinstance(la_dis_arr, list) and isinstance(pmf_la_dis_arr, list)):
+                sys.exit('la_dis_arr and pmf_la_dis_arr were not list format in python.')
+        else:
+            la_dis_arr = None
+            pmf_la_dis_arr = None
 
-    peak_lst = []
+        peak_lst = []
 
-    for i in target_region:
-        if not i:
-            continue
-        chrom, st, en, strand = i.strip().split('\t')
-        if int(en) - int(st) + 1 > max_utr_len:
-            logger.info(f'Skip more than {max_utr_len} UTR, {chrom}_{st}_{en}_{strand}')
-            continue
+        for i in target_region:
+            if not i:
+                continue
+            chrom, st, en, strand, gene_id_fbed = i.strip().split('\t')
+            if int(en) - int(st) + 1 > max_utr_len:
+                logger.info(f'Skip more than {max_utr_len} UTR, {chrom}_{st}_{en}_{strand}')
+                continue
 
-        peak_lst.append(i.strip())
+            peak_lst.append(i.strip())
 
-    target_region.close()
+        target_region.close()
 
-    original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
+        original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
 
-    pool = Pool(processes=cores)
-    signal.signal(signal.SIGINT, original_sigint_handler)
+        pool = Pool(processes=cores)
+        signal.signal(signal.SIGINT, original_sigint_handler)
 
-    res_lst = []
-    try:
-        for x in range(len(peak_lst)):
-            arg = [peak_lst[x], bam, cb_df, out, tag, verbose, n_max_apa, n_min_apa, la_dis_arr, pmf_la_dis_arr, mu_f, sigma_f]
-            res_lst.append(pool.apply_async(wraper_process, (arg,)))
-
-    except KeyboardInterrupt:
-        logger.info('Caught KeyboardInterrupt, terminating workers')
-        pool.terminate()
-        sys.exit('KeyboardInterrupt')
-
-    pool.close()
-    pool.join()
-
-    logger.info('Concating your final sheet')
-
-    md, hd='w', True
-    for df in res_lst:
+        res_lst = []
         try:
-            df = df.get()
-        except MaybeEncodingError:
-            continue
+            for x in range(len(peak_lst)):
+                if mode == '10x':
+                    cb_df = pd.read_csv(cb, names=['cb']) if cb else None
+                    arg = [peak_lst[x], bam, cb_df, out, tag, verbose, n_max_apa, n_min_apa, la_dis_arr, pmf_la_dis_arr, mu_f, sigma_f]
+                    res_lst.append(pool.apply_async(wraper_process_10x, (arg,)))
+                elif mode == 'bulk':
+                    arg = [peak_lst[x], bam, out, verbose, n_max_apa, n_min_apa, la_dis_arr, pmf_la_dis_arr, mu_f, sigma_f]
+                    res_lst.append(pool.apply_async(wraper_process_bulk, (arg,))) 
 
-        if not isinstance(df, pd.DataFrame):
-            continue
+        except KeyboardInterrupt:
+            logger.info('Caught KeyboardInterrupt, terminating workers')
+            pool.terminate()
+            sys.exit('KeyboardInterrupt')
 
-        # df = df.transpose()
-        # if hd:
-        #     df.columns = cb_df.cb.values.tolist()
-        # df.to_csv(f'{out}/pasite.csv.gz', mode=md, header=hd, compression='gzip')
-        df.to_csv(f'{out}/pa_lengths.csv', mode=md, header=hd, index=False)
-        md, hd='a', False
+        pool.close()
+        pool.join()
 
-    logger.info('Converting to sparse matrix')
+        logger.info('Concating your final sheet')
+
+        md, hd='w', True
+        for df in res_lst:
+            try:
+                df = df.get()
+            except MaybeEncodingError:
+                continue
+
+            if not isinstance(df, pd.DataFrame):
+                continue
+
+            # df = df.transpose()
+            # if hd:
+            #     df.columns = cb_df.cb.values.tolist()
+            # df.to_csv(f'{out}/pasite.csv.gz', mode=md, header=hd, compression='gzip')
+            df.to_csv(f'{out}/pa_lengths.csv', mode=md, header=hd, index=False)
+            md, hd='a', False
+
+    logger.info('Converting to sparse matrix/table')
     df = pd.read_csv(f'{out}/pa_lengths.csv')
-    sparse_matrix_adata = convert_sparse_matrix([df, pseudocount])
-    sparse_matrix_adata.write(os.path.join(out, 'adata_pa_sparse.h5ad'))
+    if mode == '10x':
+        sparse_matrix_adata = convert2sparse_10x([df, pseudocount])
+        sparse_matrix_adata.write(os.path.join(out, 'adata_pa_sparse.h5ad'))
+    elif mode == 'bulk':
+        table = convert2table([df, pseudocount])
+        table.to_csv(os.path.join(out, 'pa_table.csv'))
 
     logger.info('All done')

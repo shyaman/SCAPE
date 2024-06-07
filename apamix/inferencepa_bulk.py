@@ -25,7 +25,7 @@ def convert2table(arg):
 
     n_uniq_transcript_tot = df_pa_grouped_cb_uniq_tot['count'].sum()
     n_uniq_transcript_pa = df_pa_grouped_cb_uniq['count'].sum()
-    logger.info(f'Sample pA pct: {n_uniq_transcript_pa*100/n_uniq_transcript_tot}')
+    logger.info('Sample pA pct: {:.2f}%'.format(n_uniq_transcript_pa*100/n_uniq_transcript_tot))
 
     logger.info(f'Pseudocount: {pseudocount}')
     
@@ -96,6 +96,24 @@ def run(arg):
 
         if label == 'r1':
             continue
+            # read1 = v[label]
+            # if len(read1) == 1:
+            #     read1 = read1[0]
+            # else:
+            #     # if there were multiple reads, continue
+            #     continue
+
+            # r1_relative_start = collapse_intron(read1)
+            # if r1_relative_start > right_site and strand == '+':
+            #     continue
+
+            # if r1_relative_start < left_site and strand == '-':
+            #     continue
+
+            # pa_support, pa_len = cigar_support_bulk(read1, strand)
+
+            # if pa_support=='yes':
+            #     print(pa_support, pa_len, k, gene_id_fbed)
         elif label == 'r2':
             read2 = v[label]
             if len(read2) == 1:

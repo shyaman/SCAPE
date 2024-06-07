@@ -108,6 +108,7 @@ def run(arg):
         end_site = line.reference_end + 1
         query_name = line.query_name
 
+        # ignore reads that are not in the region
         if start_site < left_site and end_site > right_site:
             continue
 
@@ -121,6 +122,7 @@ def run(arg):
         if label == 'r1':
             continue
         elif label == 'r2':
+            # 10x is only actually r2 only
             read2 = v[label]
             if len(read2) == 1:
                 read2 = read2[0]

@@ -19,9 +19,17 @@ from utils.utils import window
     default='genes',
     help ='The prefix of output bed file.'
     )
+@click.option(
+    '--refseq',
+    is_flag=True,
+    default=False,
+    help='Use refseq annotation, default is False.'
+    )
+
 def prepare(
     gtf,
-    prefix
+    prefix,
+    refseq
     ):
     if not all([gtf]):
         cli(['prepare', '--help'])
@@ -73,21 +81,29 @@ def prepare(
     genes_use = {'antisense', 'lincRNA', 'protein_coding'}
     for gid, tids in struc.items():
         for tid, info in tids.items():
-            if 'gene_type' in info:
-                gene_type_id = 'gene_type'
-                trans_type_id = 'transcript_type'
-            elif 'gene_biotype' in info:
-                gene_type_id = 'gene_biotype'
-                trans_type_id = 'transcript_biotype'
 
-            if info[gene_type_id] not in genes_use:
-                continue
-            # remove intron retaintion isoforms
-            try:
-                if info[trans_type_id] == 'retained_intron':
+            if not refseq:
+                # for GENCODE reference
+                if 'gene_type' in info:
+                    gene_type_id = 'gene_type'
+                    trans_type_id = 'transcript_type'
+                elif 'gene_biotype' in info:
+                    gene_type_id = 'gene_biotype'
+                    trans_type_id = 'transcript_biotype'
+            
+                if info[gene_type_id] not in genes_use:
                     continue
-            except TypeError:
-                pass
+
+                # remove intron retaintion isoforms
+                try:
+                    if info[trans_type_id] == 'retained_intron':
+                        continue
+                except TypeError:
+                    pass
+            else:
+                # filter out MIR from refseq
+                if info['gene_name'].startswith('MIR'):
+                    continue
 
             if info['strand'] == '+':
                 st, en, = info['exon'][-1]
@@ -154,29 +170,29 @@ def prepare(
     # intron_out = open(intron_outfile, 'w')
     # intron_out.write('\n'.join(intron_lst))
     # intron_out.close()
-    intron_lst = sorted(intron_lst, key = lambda x: (x.split('\t')[0], int(x.split('\t')[1]), int(x.split('\t')[2])))
+    # intron_lst = sorted(intron_lst, key = lambda x: (x.split('\t')[0], int(x.split('\t')[1]), int(x.split('\t')[2])))
     
-    intron_bed = pybedtools.BedTool(
-        '\n'.join(intron_lst), 
-        from_string=True
-        )
+    # intron_bed = pybedtools.BedTool(
+    #     '\n'.join(intron_lst), 
+    #     from_string=True
+    #     )
 
-    intron_bed = intron_bed.merge(s = True)
-    intron_bed = intron_bed.intersect(bedtmp, v=True)
-    intron_lst = []
-    for line in intron_bed:
-        line = str(line).strip().split('\t')
-        intron_lst.append(
-            '\t'.join(
-                line[:-1] + ['.', '.', line[-1]]
-            ) + '\n'
-        )
-    intron_bed = pybedtools.BedTool(
-        '\n'.join(intron_lst),
-        from_string=True
-        )
-    intron_bed = intron_bed.subtract(exon_from_gtf, s=True)
-    with open(intron_outfile, 'w') as intron_out:
-        for line in intron_bed:
-            line = str(line).strip().split('\t')
-            intron_out.write('\t'.join([line[0],line[1], line[2], line[-1]]) + '\n')
+    # intron_bed = intron_bed.merge(s = True)
+    # intron_bed = intron_bed.intersect(bedtmp, v=True)
+    # intron_lst = []
+    # for line in intron_bed:
+    #     line = str(line).strip().split('\t')
+    #     intron_lst.append(
+    #         '\t'.join(
+    #             line[:-1] + ['.', '.', line[-1]]
+    #         ) + '\n'
+    #     )
+    # intron_bed = pybedtools.BedTool(
+    #     '\n'.join(intron_lst),
+    #     from_string=True
+    #     )
+    # intron_bed = intron_bed.subtract(exon_from_gtf, s=True)
+    # with open(intron_outfile, 'w') as intron_out:
+    #     for line in intron_bed:
+    #         line = str(line).strip().split('\t')
+    #         intron_out.write('\t'.join([line[0],line[1], line[2], line[-1]]) + '\n')

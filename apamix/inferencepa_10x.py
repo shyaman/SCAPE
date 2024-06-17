@@ -122,7 +122,7 @@ def run(arg):
         if label == 'r1':
             continue
         elif label == 'r2':
-            # 10x is only actually r2 only
+            # NOTE: 10x is only actually r2 only
             read2 = v[label]
             if len(read2) == 1:
                 read2 = read2[0]

@@ -170,9 +170,9 @@ def readpa(
     if not create_table:
         if not os.path.exists(os.path.join(out, 'tmp')):
             os.makedirs(os.path.join(out, 'tmp'))
-            os.makedirs(os.path.join(out, 'huge'))
-            os.makedirs(os.path.join(out, 'TooLongRegion'))
-            os.makedirs(os.path.join(out, 'TimeConsulting'))
+            # os.makedirs(os.path.join(out, 'huge'))
+            # os.makedirs(os.path.join(out, 'TooLongRegion'))
+            # os.makedirs(os.path.join(out, 'TimeConsulting'))
 
         target_region = open(bed, 'r')
         res_lst = []

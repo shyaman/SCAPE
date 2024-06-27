@@ -51,7 +51,7 @@ def convert2sparse_10x(arg):
     return adata_pa
 
 def run(arg):
-    line, bamfile, cb_df, outdir, tag, verbose, n_max_apa, n_min_apa, LA_dis_arr, pmf_LA_dis_arr,mu_f,sigma_f = arg
+    line, bamfile, cb_df, outdir, tag, verbose, n_max_apa, n_min_apa, LA_dis_arr, pmf_LA_dis_arr,mu_f,sigma_f, freq_table = arg
     region_name = line
     chrom, left_site, right_site, strand, gene_id_fbed = line.split('\t')
 
@@ -74,24 +74,27 @@ def run(arg):
     bamfh = pysam.AlignmentFile(bamfile, 'rb', check_sq=False)
 
     apa_reads = dotdict({
-            # 'r2_len_arr': [],
-            # 'r2_utr_st_arr': [],
-            # 'r1_len_arr': [],
-            # 'polya_len_arr': [],
-            # 'pa_site_arr': [],
             'cb': [],
             'umi': [],
             'pa_len_arr': [],
-            # 'pai_len_arr': [],
             'strand': [],
             'gene_id': [],
             'ensid': [],
-            # 'sequence': [],
+            'A': [],
+            'C': [],
+            'G': [],
+            'T': []
+        }) if freq_table else dotdict({
+            'cb': [],
+            'umi': [],
+            'pa_len_arr': [],
+            'strand': [],
+            'gene_id': [],
+            'ensid': []
         })
 
     left_site = int(left_site)
     right_site = int(right_site)
-
 
     res = defaultdict(dict_list)
 
@@ -137,7 +140,7 @@ def run(arg):
             if r2_relative_start < left_site and strand == '-':
                 continue
 
-            pa_support, pa_len = cigar_support_adj(read2, strand)
+            pa_support, pa_len, freq = cigar_support_adj(read2, strand)
 
             # try:
             #     dt = len(read2.get_tag('DT'))
@@ -195,23 +198,7 @@ def run(arg):
             if r2_relative_start < left_site and strand == '-':
                 continue
 
-            pa_support, pa_len = cigar_support_adj(read2, strand)
-
-            # try:
-            #     dt = len(read2.get_tag('DT'))
-            #     if read2.is_reverse:
-            #         if cigar_info[0][0] == 4:
-            #             r1_dt = int(cigar_info[0][-1]) + dt
-            #         else:
-            #             r1_dt = dt
-            #     else:
-            #         if cigar_info[-1][0] == 4:
-            #             r1_dt = int(cigar_info[-1][-1]) + dt
-            #         else:
-            #             r1_dt = dt
-
-            # except KeyError:
-            #     dt = 0
+            pa_support, pa_len, freq = cigar_support_adj(read2, strand)
             
             # try:
             #     pai = read2.get_tag('pa')
@@ -253,6 +240,17 @@ def run(arg):
             apa_reads.strand.append(strand)
             apa_reads.gene_id.append(gid)
             apa_reads.ensid.append(ensid)
+            if freq_table:
+                if freq:
+                    apa_reads.A.append(freq['A'])
+                    apa_reads.C.append(freq['C'])
+                    apa_reads.G.append(freq['G'])
+                    apa_reads.T.append(freq['T'])
+                else:
+                    apa_reads.A.append(0)
+                    apa_reads.C.append(0)
+                    apa_reads.G.append(0)
+                    apa_reads.T.append(0)
         except KeyError:
             continue
 

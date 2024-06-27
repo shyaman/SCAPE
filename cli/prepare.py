@@ -153,46 +153,18 @@ def prepare(
     sort and merge utr region information
     """
     bedtmp = pybedtools.BedTool(utr_outfile)
+    # bedtmp = bedtmp.sort().merge(d=500, s = True, c = 4, o = 'distinct', delim = ';')
     bedtmp = bedtmp.sort().merge(d=500, s = True, c = 4, o = 'distinct', delim = ';')
-    
     utr_out = open(utr_outfile, 'w')
-    utr_out.write(str(bedtmp))
+    for line in bedtmp:
+        # write only if coloumn 4 is single gene
+        if len(line[4].split(';')) == 1:
+            utr_out.write(str(line))
+
+    # utr_out.write(str(bedtmp))
     if mt_lst:
         mt_tmp = pybedtools.BedTool('\n'.join(mt_lst), from_string=True).sort().merge(s=True, c=4, o='distinct', delim=';')
-        utr_out.write(str(mt_tmp))
+        for line in mt_tmp:
+            if len(line[4].split(';')) == 1:
+                utr_out.write(str(line))
     utr_out.close()
-
-    """
-    prepare intronic region:
-     - remove any overlap with utr region which output from last step
-     - subtract any overlap with exon region
-    """
-    # intron_out = open(intron_outfile, 'w')
-    # intron_out.write('\n'.join(intron_lst))
-    # intron_out.close()
-    # intron_lst = sorted(intron_lst, key = lambda x: (x.split('\t')[0], int(x.split('\t')[1]), int(x.split('\t')[2])))
-    
-    # intron_bed = pybedtools.BedTool(
-    #     '\n'.join(intron_lst), 
-    #     from_string=True
-    #     )
-
-    # intron_bed = intron_bed.merge(s = True)
-    # intron_bed = intron_bed.intersect(bedtmp, v=True)
-    # intron_lst = []
-    # for line in intron_bed:
-    #     line = str(line).strip().split('\t')
-    #     intron_lst.append(
-    #         '\t'.join(
-    #             line[:-1] + ['.', '.', line[-1]]
-    #         ) + '\n'
-    #     )
-    # intron_bed = pybedtools.BedTool(
-    #     '\n'.join(intron_lst),
-    #     from_string=True
-    #     )
-    # intron_bed = intron_bed.subtract(exon_from_gtf, s=True)
-    # with open(intron_outfile, 'w') as intron_out:
-    #     for line in intron_bed:
-    #         line = str(line).strip().split('\t')
-    #         intron_out.write('\t'.join([line[0],line[1], line[2], line[-1]]) + '\n')

@@ -143,6 +143,13 @@ logger.add('apamix.log',
     default=False,
     help='Only create the table'
     )
+    
+@click.option(
+    '--freq-table',
+    is_flag=True,
+    default=False,
+    help='create the frequency table'
+    )
 
 def readpa(
     bed,
@@ -162,6 +169,7 @@ def readpa(
     verbose,
     mode,
     create_table,
+    freq_table,
     ):
     if not all([bed, bam, out]):
         cli(['readpa', '--help'])
@@ -211,7 +219,7 @@ def readpa(
             for x in range(len(peak_lst)):
                 if mode == '10x':
                     cb_df = pd.read_csv(cb, names=['cb']) if cb else None
-                    arg = [peak_lst[x], bam, cb_df, out, tag, verbose, n_max_apa, n_min_apa, la_dis_arr, pmf_la_dis_arr, mu_f, sigma_f]
+                    arg = [peak_lst[x], bam, cb_df, out, tag, verbose, n_max_apa, n_min_apa, la_dis_arr, pmf_la_dis_arr, mu_f, sigma_f, freq_table]
                     res_lst.append(pool.apply_async(wraper_process_10x, (arg,)))
                 elif mode == 'bulk':
                     arg = [peak_lst[x], bam, out, verbose, n_max_apa, n_min_apa, la_dis_arr, pmf_la_dis_arr, mu_f, sigma_f]
@@ -245,7 +253,7 @@ def readpa(
             md, hd='a', False
 
     logger.info('Converting to sparse matrix/table')
-    df = pd.read_csv(f'{out}/pa_lengths.csv')
+    df = pd.read_csv(os.path.join(out, 'pa_lengths.csv'))
     if mode == '10x':
         sparse_matrix_adata = convert2sparse_10x([df, pseudocount])
         sparse_matrix_adata.write(os.path.join(out, 'adata_pa_sparse.h5ad'))
